@@ -1,0 +1,11 @@
++25 energy for each sun
+50 energy for sunflower
+100 energy for standard shooter
+
+8 sec per sun
+1 sec per fire
+
+11 hits to kill normal zombie with standard shooter
+29 hits to kill cone zombie with standard shooter
+Fast zombies go 2x as fast as normal zombies
+17 hits to kill fast zombie with standard shooter

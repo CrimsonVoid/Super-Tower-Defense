@@ -1,0 +1,12 @@
+towers fire
+
+COLLISION DETECTION!!!
+set correct speeds for enemies
+
+hp, power, speed for enemies
+
+Tower's add fire method(incorporate into TowerObject)
+
+hp, power, and price balance for towers and enemies
+
+add and play music for indiv. towers, and extra sound effects
