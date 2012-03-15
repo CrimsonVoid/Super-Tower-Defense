@@ -11,7 +11,7 @@ public class Game extends JFrame
 		super("Super UnExtreme Tower Defense X"); 
 		setSize(WIDTH,HEIGHT);
 		
-		Background theGame = new Background();
+		Background theGame = new Background(WIDTH, HEIGHT);
 		((Component)theGame).setFocusable(true);
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		

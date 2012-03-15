@@ -9,4 +9,38 @@ Tower's add fire method(incorporate into TowerObject)
 
 hp, power, and price balance for towers and enemies
 
-add and play music for indiv. towers, and extra sound effects
+add and play music for indiv. towers, and extra sound effects(pfft yea gl with that)
+
+collision detection hint
+if(!enemy.isEmpty()){
+			
+			//Check Standard Tower collision
+			if(!standard.isEmpty()){
+				for(int twr = 0; twr < standard.size(); twr++){
+					for(int eny = 0; eny < enemy.size(); eny++){
+						if(standard.get(twr).getRect().intersects(enemy.get(eny).getRect())){
+							enemy.get(eny).setSpeed(0);
+							standard.get(twr).setHP(standard.get(twr).getHP() - enemy.get(eny).getPow());
+							if(standard.get(twr).getHP() <= 0){
+								for(int x = 0; x < gridz.size(); x++){
+									if((standard.get(twr).getX() == gridz.get(x).getX()) &&(standard.get(twr).getY() == gridz.get(x).getY())){
+										gridz.get(x).setAvail(true);
+									}
+								}
+								standard.remove(twr);
+							}
+						}
+						else{
+							if(enemy.get(eny).getTowerType().equals(nrml)){
+								enemy.get(eny).setSpeed(3);
+							}
+							if(enemy.get(eny).getTowerType().equals(fast)){
+								enemy.get(eny).setSpeed(3);
+							}
+							if(enemy.get(eny).getTowerType().equals(strong)){
+								enemy.get(eny).setSpeed(3);
+							}
+						}
+					}
+				}
+			}
