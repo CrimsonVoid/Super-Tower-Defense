@@ -1,27 +1,31 @@
-public class TowerAttributes {
-	private int hp, power, speed, attackRate;
-	private String type;
+// TowerObjects and EnemyObjects basically have the same properties so we can use this as a template to set the attributes of the respective object
 
-	public TowerAttributes(int health, int pow, int spd, String typ) {
-		hp = health;
-		power = pow;
-		speed = spd;
-		type = typ;
+public class TowerAttributes {
+	private int hp, power, speed, attackRate, cost;
+	private String type;
+	
+	public TowerAttributes(String typ, int health, int pow, int atkRate, int spd) {
+		this(typ, health, pow, atkRate, spd, 0);
 	}
 	
-	public TowerAttributes(int health, int pow, int spd, int attack, String typ) {
-		hp = health;
-		power = pow;
-		speed = spd;
-		attackRate = attack;
-		type = typ;
+	public TowerAttributes(String typ, int health, int pow, int atkRate, int spd, int value) {
+		// Tower - health, power (of each bullet), fireRate, speed (how fast the bullet travels), cost
+		// Enemy - health, power (of each attack), attackRate, speed (how fast it moves)
+		setHP(health);
+		setPower(pow);
+		setAttackRate(atkRate);
+		setSpeed(spd);
+		setCost(value);
+		setType(typ);
 	}
-
+	
+	//* Setters and Getters *//
+	
 	public void setHP(int health) {
 		hp = health;
 	}
 
-	public void setPow(int pow) {
+	public void setPower(int pow) {
 		power = pow;
 	}
 
@@ -33,6 +37,10 @@ public class TowerAttributes {
 		attackRate = attack;
 	}
 	
+	public void setCost(int value) {
+		cost = value;
+	}
+		
 	public void setType(String typ) {
 		type = typ;
 	}
@@ -41,7 +49,7 @@ public class TowerAttributes {
 		return hp;
 	}
 
-	public int getPow() {
+	public int getPower() {
 		return power;
 	}
 
@@ -53,6 +61,10 @@ public class TowerAttributes {
 		return attackRate;
 	}
 
+	public int getCost() {
+		return cost;
+	}
+	
 	public String getType() {
 		return type;
 	}

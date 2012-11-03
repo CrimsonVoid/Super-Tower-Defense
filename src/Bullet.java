@@ -8,24 +8,44 @@ import javax.imageio.ImageIO;
 
 public class Bullet {
 	
-	private int xPos, yPos, power;
+	private int xPos, yPos, power, speed;
 	private BufferedImage bullet;
 	private Rectangle rect;
 	
-	public Bullet(int x, int y, int pow) {
-		xPos = x;
-		yPos = y;
-		power = pow;
+	public Bullet(int x, int y, int pow, int spd, String bulletType) {
+		setX(x);
+		setY(y);
+		setPower(pow);
+		setSpeed(spd);
 		
 		try {
-			bullet = ImageIO.read(new File("media\\images\\bullet.png"));
-		} catch (IOException e1) {
-			System.out.println("Curse your sudden but inevitable betrayal(Can't find bullet image)");
-			e1.printStackTrace();
+			bullet = ImageIO.read(new File("media//images//bullet//" + bulletType + ".png"));
+		} catch (IOException e) {
+			System.out.printf("Unable to find %s image in Bullet. Attempting to load default image\n", bulletType);
+			try {
+				bullet = ImageIO.read(new File("media//images//bullet//bullet.png"));
+			} catch (IOException e2) {
+				System.out.printf("Unable to find default bullet image in Bullet\n");
+			}
 		}
 		
 		rect = new Rectangle(xPos, yPos, bullet.getWidth(), bullet.getHeight());
 	}
+	
+	public void action() {
+		xPos += speed;
+		rect.setLocation(xPos, yPos);
+	}
+	
+	public void draw(Graphics window) {
+		window.drawImage(bullet, xPos, yPos, null);
+	}
+	
+	public String toString() {
+		return String.format("Power: %d Speed: %d [%d, %d]\n", power, speed, xPos, yPos);
+	}
+	
+	//* Setters and Getters *//
 	
 	public void setX(int x) {
 		xPos = x;
@@ -35,8 +55,12 @@ public class Bullet {
 		yPos = y;
 	}
 	
-	public void setPow(int pow) {
+	public void setPower(int pow) {
 		power = pow;
+	}
+	
+	public void setSpeed(int spd) {
+		speed = spd;
 	}
 	
 	public int getX() {
@@ -47,22 +71,15 @@ public class Bullet {
 		return yPos;
 	}
 	
-	public int getPow() {
+	public int getPower() {
 		return power;
+	}
+	
+	public int getSpeed() {
+		return speed;
 	}
 	
 	public Rectangle getRect() {
 		return rect;
-	}
-	
-	public void action() {
-		//TowerAttributes.bulletSpeed effect speed of bullet?
-		xPos += 10;
-		rect.setLocation(xPos, yPos);
-	}
-	
-	public void draw(Graphics window) {
-		window.drawImage(bullet, xPos, yPos, null);
-		//window.drawImage(bullet, xPos, yPos, bullet.getWidth(), bullet.getHeight(), null);
 	}
 }

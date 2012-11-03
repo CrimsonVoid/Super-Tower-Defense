@@ -1,582 +1,428 @@
 import java.awt.Canvas;
-import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Image;
 import java.awt.RenderingHints;
-import java.awt.Toolkit;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.Random;
 
 import javax.imageio.ImageIO;
+import javax.swing.JOptionPane;
+import javax.swing.UIManager;
+import javax.swing.UnsupportedLookAndFeelException;
 
 public class Background extends Canvas implements MouseListener, Runnable{
-	private TowerAttributes towerAtr[] = {new TowerAttributes(50, 25, 2500, "moogle"),	//health, money to add, time interval
-											new TowerAttributes(100, 10, 1000, "std"),
-											new TowerAttributes(200, 13, 1000, "hvy"),
-											new TowerAttributes(150, 18, 1000, "pwr")};
+	private static final long serialVersionUID = 9066447519364005185L;
 	
-	private TowerAttributes enemyAtr[] = {new TowerAttributes(1, 10, 1, 1000, "nrml"),
-											new TowerAttributes(1, 10, 1,  1000, "fast"),
-											new TowerAttributes(1, 10, 1,  1000, "strong")};
-
-	//private ArrayList<Grid> gridList = new ArrayList<Grid>();
-	private Grid gridPlane = new Grid();
-	private ArrayList<Bullet> bulletList = new ArrayList<Bullet>();
-	private ArrayList<TowerObject> towerList = new ArrayList<TowerObject>();
-	private ArrayList<EnemyObject> enemyList = new ArrayList<EnemyObject>();
-
-	/*private Iterator<Grid> itrGrid;
-	private Iterator<Bullet> itrBlt;
-	private Iterator<TowerObject> itrTower;
-	private Iterator<EnemyObject> itrEnmy;*/
-	
-	private int money;
-	private long startMunny;
-	private long lostTime;
-	
-	private boolean lostB;
-	private boolean achPlay;
-	
-	private String temp;
-	
-	private MP3 music;
-	private MP3 achv;
-	private Font font;
+	public static int width, height;
+	// time range in milliseconds to add money or spawn enemies
+	private int minMoneySpawnInterval = 7000, maxMoneySpawnInterval = 15000, minEnemySpawnInterval = 10000, maxEnemySpawnInterval = 15000;
+	// set to System.currentTimeMillis() for generating money and spawning enemies
+	private long moneyGen, enemyGen;
+	private int money, towerCost, selIndex, moneySpawnInterval, enemySpawnInterval;
 	
 	private Image bg;
-	private Image menu;
-	private Image lost;
-	private Image ach;
 	private Image dbImage;
 	private Graphics dbg;
+	
+	private MP3 music;
+	
+	private Grid gridPlane;
+	private MenuFrame menu;
+	private FinalStand fStand[];
+	private TowerAttributes towerAttr[], enemyAttr[];
+	private ArrayList<Bullet> bulletList;
+	private ArrayList<TowerObject> towerList;
+	private ArrayList<EnemyObject> enemyList;
+	private Iterator<Bullet> iB;
+	private Iterator<TowerObject> iT;
+	private Iterator<EnemyObject> iE;
 	
 	public Background(int width, int height) {
 		this.addMouseListener(this);
 		this.setSize(width, height);
+		Background.width = width;
+		Background.height = height;
+		
+		readCSV();
 		
 		money = 500;
-		lostB = achPlay = false;
-		temp = "";
-		startMunny = lostTime = System.currentTimeMillis();
+		selIndex = towerCost = -1;
+		moneySpawnInterval = new Random().nextInt(maxMoneySpawnInterval - minMoneySpawnInterval) + (maxMoneySpawnInterval - minMoneySpawnInterval);
+		enemySpawnInterval = new Random().nextInt(maxEnemySpawnInterval - minEnemySpawnInterval) + (maxEnemySpawnInterval - minEnemySpawnInterval);
+		moneyGen = enemyGen = System.currentTimeMillis();
 		
 		gridPlane = new Grid();
+		menu = new MenuFrame(towerNames());
+		fStand = new FinalStand[Grid.gridColumn];
 		bulletList = new ArrayList<Bullet>();
 		towerList = new ArrayList<TowerObject>();
 		enemyList = new ArrayList<EnemyObject>();
 		
-		music = new MP3("media\\music\\background.mp3");
-		achv = new MP3("media\\music\\achievement.mp3");
-		
-		font = new Font("Neuropol", Font.PLAIN,  12);
-		
-		try {
-			bg = ImageIO.read(new File("media\\images\\bg.jpg"));
-			menu = ImageIO.read(new File("media\\images\\menu\\menu.jpg"));
-		} catch (Exception e) {
-			System.out.println("Everything's shiny, Cap'n. Not to fret!(Can't find bg/menu image)");
+		for(int i = 0; i < fStand.length; ++i) {
+			fStand[i] = new FinalStand(0, 90 + 105*i);
 		}
 		
-		enemyList.add(new EnemyObject(800, 85, enemyAtr[0]));
+		music = new MP3("media//music//background.mp3");
 		
+		try {
+			UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+		} catch (ClassNotFoundException e1) {
+			e1.printStackTrace();
+		} catch (InstantiationException e1) {
+			e1.printStackTrace();
+		} catch (IllegalAccessException e1) {
+			e1.printStackTrace();
+		} catch (UnsupportedLookAndFeelException e1) {
+			e1.printStackTrace();
+		}
+		
+		try {
+			bg = ImageIO.read(new File("media//images//bg.jpg"));
+		} catch (Exception e) {
+			System.out.printf("Unable to find bg image in Background\n");
+		}
+				
 		music.play();
-		//What does this do?
 		new Thread(this).start();
 	}
 	
 	public void paint(Graphics window) {
-		System.out.println("Calling paint");
-		//Anti-Alias font. Thanks to thenewboston @ http://www.youtube.com/user/thenewboston
+		// Sets anti-aliasing if JRE supports it
 		if(window instanceof Graphics2D){
 			Graphics2D g2 = (Graphics2D)window;
 			g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
 		}
 		
-		window.drawImage(bg, 0, 0, 1024, 768, null);
-		window.drawImage(menu, 85, 0, 653, 80, null);
-				
-		//use for displaying money
-		window.setFont(font);
-		window.drawString("Munny: " + money, 125, 71);
+		action();
+		collisionDetection();
 		
-		fire();
-		move();
-		collisionDetectionTEnA();
-		collisionDetectionB();
+		window.drawImage(bg, 0, 0, width, height, null);
+		menu.draw(window);
+		window.drawString(String.format("Munny: %d", money), 125, 70);
 		drawObjects(window);
-		lostYet();
-				
+		
 		repaint();
 	}
 	
-	public void update(Graphics g) {
-		//special thanks to http://javaboutique.internet.com/tutorials/Java_Game_Programming/BildschirmflackernEng.html
-		//yippie for DoubleBuffering!
-		// initialize buffer
-		System.out.println("Calling update");
-		if (dbImage == null){
+	public void update(Graphics window) {
+		// Initialize buffer
+		if (dbImage == null) {
 			dbImage = createImage(this.getSize().width, this.getSize().height);
 			dbg = dbImage.getGraphics();
 		}
-
-		// clear screen in background
+		
+		// Clear screen in background
 		dbg.setColor(getBackground());
 		dbg.fillRect(0, 0, this.getSize().width, this.getSize().height);
-
-		// draw elements in background
-		dbg.setColor (getForeground());
+		
+		// Draw elements in background
+		dbg.setColor(getForeground());
 		paint(dbg);
-
-		// draw image on the screen
-		g.drawImage(dbImage, 0, 0, this);
+		
+		// Draw image on the screen
+		window.drawImage(dbImage, 0, 0, this);
 	}
-	
+
 	public void run() {
-		System.out.printf("%s\n", "What is this doing here?");
-	}
-	
-	//fixed
-	/*public void createGrid(ArrayList<Grid> list) {
-		System.out.print("Creating Grid...");
-		
-		for(int yPos = 110; yPos <= 700; yPos += 110)
-			for(int xPos = 110; xPos < 1000; xPos += 110)
-				list.add(new Grid(xPos, yPos));
-		
-		System.out.println("Done!");
-	}*/
-	
-	//fixed
-	public void collisionDetectionTEnA() {
-		for(TowerObject t : towerList)
-			for(EnemyObject e : enemyList) {
-				if(t.getRect().intersects(e.getRect())) {
-					e.setSpeed(0);
-					t.setHP(t.getHP() - e.attack());
-					
-					if(t.getHP() <= 0) {
-						towerList.remove(t);
-						e.resetSpeed();
-					}
-				}
-				
-				e.resetSpeed();
-			}
-		
-		/*if(!enemy.isEmpty()){
-			
-			//Check Standard Tower collision
-			if(!standard.isEmpty()){
-				for(int twr = 0; twr < standard.size(); twr++){
-					for(int eny = 0; eny < enemy.size(); eny++){
-						if(standard.get(twr).getRect().intersects(enemy.get(eny).getRect())){
-							enemy.get(eny).setSpeed(0);
-							standard.get(twr).setHP(standard.get(twr).getHP() - enemy.get(eny).getPow());
-							if(standard.get(twr).getHP() <= 0){
-								for(int x = 0; x < gridz.size(); x++){
-									if((standard.get(twr).getX() == gridz.get(x).getX()) &&(standard.get(twr).getY() == gridz.get(x).getY())){
-										gridz.get(x).setAvail(true);
-									}
-								}
-								standard.remove(twr);
-							}
-						}
-						else{
-							if(enemy.get(eny).getType().equals(nrml)){
-								enemy.get(eny).setSpeed(3);
-							}
-							if(enemy.get(eny).getType().equals(fast)){
-								enemy.get(eny).setSpeed(3);
-							}
-							if(enemy.get(eny).getType().equals(strong)){
-								enemy.get(eny).setSpeed(3);
-							}
-						}
-					}
-				}
-			}
-			
-			//Check Heavy Tower collision
-			if(!heavy.isEmpty()){
-				for(int twr = 0; twr < heavy.size(); twr++){
-					for(int eny = 0; eny < enemy.size(); eny++){
-						if(heavy.get(twr).getRect().intersects(enemy.get(eny).getRect())){
-							enemy.get(eny).setSpeed(0);
-							heavy.get(twr).setHP(heavy.get(twr).getHP() - enemy.get(eny).getPow());
-							if(heavy.get(twr).getHP() <= 0){
-								for(int x = 0; x < gridz.size(); x++){
-									if((heavy.get(twr).getX() == gridz.get(x).getX()) &&(heavy.get(twr).getY() == gridz.get(x).getY())){
-										gridz.get(x).setAvail(true);
-									}
-								}
-								heavy.remove(twr);
-							}
-						}
-						else{
-							if(enemy.get(eny).getType().equals(nrml)){
-								enemy.get(eny).setSpeed(3);
-							}
-							if(enemy.get(eny).getType().equals(fast)){
-								enemy.get(eny).setSpeed(3);
-							}
-							if(enemy.get(eny).getType().equals(strong)){
-								enemy.get(eny).setSpeed(3);
-							}
-						}
-					}
-				}
-			}
-			
-			//Check Power Tower collision
-			if(!power.isEmpty()){
-				for(int twr = 0; twr < power.size(); twr++){
-					for(int eny = 0; eny < enemy.size(); eny++){
-						if(power.get(twr).getRect().intersects(enemy.get(eny).getRect())){
-							enemy.get(eny).setSpeed(0);
-							power.get(twr).setHP(power.get(twr).getHP() - enemy.get(eny).getPow());
-							if(power.get(twr).getHP() <= 0){
-								for(int x = 0; x < gridz.size(); x++){
-									if((power.get(twr).getX() == gridz.get(x).getX()) &&(power.get(twr).getY() == gridz.get(x).getY())){
-										gridz.get(x).setAvail(true);
-									}
-								}
-								power.remove(twr);
-							}
-						}
-						else{
-							if(enemy.get(eny).getType().equals(nrml)){
-								enemy.get(eny).setSpeed(3);
-							}
-							if(enemy.get(eny).getType().equals(fast)){
-								enemy.get(eny).setSpeed(3);
-							}
-							if(enemy.get(eny).getType().equals(strong)){
-								enemy.get(eny).setSpeed(3);
-							}
-						}
-					}
-				}
-			}
-		}*/
-	}
-	
-	//fixed
-	public void collisionDetectionB() {
-		for(Bullet b : bulletList)
-			for(EnemyObject e : enemyList)
-				if(b.getRect().intersects(e.getRect())) {
-					e.setHP(e.getHP() - b.getPow());
-					
-					if(e.getHP() <= 0)
-						enemyList.remove(e);
-					bulletList.remove(b);
-				}
-		
-		/*if(!bullet.isEmpty()){
-			if(!enemy.isEmpty()){
-				for(int x = 0; x < bullet.size(); x++){
-					for(int eny = 0; eny < enemy.size(); eny++){
-						if(bullet.get(x).getRect().intersects(enemy.get(eny).getRect())){
-							enemy.get(eny).setHP(enemy.get(eny).getHP() - bullet.get(x).getPow());
-							if(enemy.get(eny).getHP() <= 0){
-								enemy.remove(eny);
-							}
-						}
-					}
-				}
-			}
-		}*/
-	}
-	
-	//fixed
-	public void move() {
-		for(EnemyObject o : enemyList)
-			o.action();
-		for(Bullet o : bulletList)
-			o.action();
-		
-		/*itrEnmy = enemy.iterator();
-		while(itrEnmy.hasNext()){
-			itrEnmy.next().action();
-		}
-		
-		itrBlt = bullet.iterator();
-		while(itrBlt.hasNext()){
-			itrBlt.next().action();
-		}*/
-	}
-	
-	//fixed
-	public void drawObjects(Graphics window) {
-		gridPlane.draw(window);
-		
-		for(EnemyObject o : enemyList)
-			o.draw(window);
-		
-		for(TowerObject o : towerList)
-			o.draw(window);
-		
-		for(Bullet o : bulletList)
-			o.draw(window);
-		
-		/*itrGrid = gridz.iterator();
-		while(itrGrid.hasNext()){
-			itrGrid.next().draw(window);
-		}
-		
-		itrEnmy = enemy.iterator();
-		while(itrEnmy.hasNext()){
-			itrEnmy.next().draw(window);
-		}
-		
-		itrBlt = bullet.iterator();
-		while(itrBlt.hasNext()){
-			itrBlt.next().draw(window);
-		}*/
-	}
-	
-	//fixed
-	public void fire() {
-		for(TowerObject o : towerList) {
-			int newObj = o.fire();
-			
-			if(newObj > 0) {
-				if(o.getType().equals(towerAtr[0].getType()) && newObj > 0)
-					money += newObj;
-				else
-					bulletList.add(new Bullet(o.getX()+(o.getWidth()/2), o.getY()+(o.getHeight()/2), newObj));
-			}
-		
-		}
-		
-		//add money at random intervals from 8-15 sec
-		
-		/*if(System.currentTimeMillis() - startTower >= 1000){
-			if(!standard.isEmpty()){
-				for(int x = 0; x < standard.size(); x++){
-					bulletList.add(new Bullet(standard.get(x).getX()+80, standard.get(x).getY()+40, standard.get(x).getPow()));
-				}
-			}
-			if(!heavy.isEmpty()){
-				for(int x = 0; x < heavy.size(); x++){
-					bullet.add(new Bullet(heavy.get(x).getX()+80, heavy.get(x).getY()+40, heavy.get(x).getPow()));
-				}
-			}
-			if(!power.isEmpty()){
-				for(int x = 0; x < power.size(); x++){
-					bullet.add(new Bullet(power.get(x).getX()+80, power.get(x).getY()+40, power.get(x).getPow()));
-				}
-			}
-			startTower = System.currentTimeMillis();
-		}
-		
-		if(System.currentTimeMillis() - startMunny >= 8000){
-			if(!munny.isEmpty()){
-				for(int x = 0; x < munny.size(); x++){
-					money += 25;
-				}
-			}
-			startMunny = System.currentTimeMillis();
-		}*/
+		// TODO - find use for threading; perhaps to spawn enemies and generate money
 	}
 
-	//fixed
-	public void lostYet() {
-		for(EnemyObject e : enemyList)
+	private void action() {
+		// Generate money on set interval between minMoneySpawnInterval and maxMoneySpawnInterval milliseconds
+		if(System.currentTimeMillis() - moneyGen >= moneySpawnInterval) {
+			money += 50;
+			moneySpawnInterval = new Random().nextInt(maxMoneySpawnInterval - minMoneySpawnInterval) + (maxMoneySpawnInterval - minMoneySpawnInterval);
+			moneyGen = System.currentTimeMillis();
+		}
+		
+		// Spawn enemies on set intervals between minEnemySpawnInterval and maxEnemySpawnInterval milliseconds
+		if(System.currentTimeMillis() - enemyGen >= enemySpawnInterval) {
+			enemyList.add(new EnemyObject(width, 90 + new Random().nextInt(6) * 105, enemyAttr[new Random().nextInt(enemyAttr.length)]));
+			enemySpawnInterval = new Random().nextInt(maxEnemySpawnInterval - minEnemySpawnInterval) + (maxEnemySpawnInterval - minEnemySpawnInterval);
+			enemyGen = System.currentTimeMillis();
+		}
+		
+		// Fires a bullet if the towers' cool down has ended 
+		for(TowerObject t : towerList) {
+			// TowerObject.action() returns the power of the TowerObject if it can attack (cool down), or 0 if it can't
+			int power = t.action();
+			
+			if(power > 0) {
+				// if the attacking tower generates money, it adds 'power' to 'money'
+				if(t.getType().equals(towerAttr[0].getType()))
+					money += power;
+				
+				// Otherwise it adds a bullet on (the right edge of 't', centered on the Y-axis, power and speed of 't', and the bullet image to be used)  
+				else
+					bulletList.add(new Bullet(t.getX()+t.getWidth(), t.getY()+(t.getHeight()/2), power, t.getSpeed(), t.getType()));
+			}
+		}
+		
+		// Iterate through each item in fStand, enemyList, and bulletList calling action() and removing the object when necessary
+		
+		for(FinalStand fS : fStand)
+			fS.action();
+		
+		iE = enemyList.iterator();
+		EnemyObject e;
+		while(iE.hasNext()) {
+			e = iE.next();
+			e.action();
+			// Checks whether the enemy has reached the left edge of the map
 			if(e.getX() <= 0) {
-				try {
-					lost = ImageIO.read(new File("media\\images\\GO\\lost.png"));
-				} catch(IOException ex) {
-					System.out.println("Curse your sudden but inevitable betrayal(Can't find lost image)");
-				}
-				
-				if(lostB == false){
-					lostB = true;
-					lostTime = System.currentTimeMillis();
-				}
-				
+				gameOver();
 				return;
 			}
+		}
 		
-		/*itrEnmy = enemy.iterator();
-		while(itrEnmy.hasNext()){
-			if(itrEnmy.next().getX() <= 0){
-				try {
-					lost = ImageIO.read(new File("media\\images\\\\GO\\lost.jpg"));
-				} catch (IOException e) {
-					System.out.println("Curse your sudden but inevitable betrayal(Can't find lost image)");
-				}
-				if(lostB == false){
-					lostB = true;
-					lostTime = System.currentTimeMillis();
-				}
-			}
-		}*/
+		iB = bulletList.iterator();
+		Bullet b;
+		while(iB.hasNext()) {
+			b = iB.next();
+			b.action();
+			// Checks and removes the bullet if it is off screen
+			if(b.getX() >= Background.width)
+				iB.remove();
+		}
 	}
 	
-	public void achvUnlocked() {
-		if(System.currentTimeMillis() - lostTime >= 3000){
-			try
-			{
-				ach = Toolkit.getDefaultToolkit().getImage("media\\images\\GO\\ach.png"); 
+	private void collisionDetection() {
+		TowerObject t;
+		EnemyObject e;
+		Bullet b;
+		iE = enemyList.iterator();
+		
+		// Checks collision of enemyList against fStand, bulletList and towerList
+		while(iE.hasNext()) {
+			iT = towerList.iterator();
+			iB = bulletList.iterator();
+			e = iE.next();
+			
+			for(FinalStand fS : fStand)
+				if(fS.getRect().intersects(e.getRect())) {
+					fS.setActivated(true);
+					iE.remove();
+				}
+			
+			while(iB.hasNext()) {
+				b = iB.next();
+				
+				if(b.getRect().intersects(e.getRect())) {
+					e.setHP(e.getHP() - b.getPower());
+					
+					if(e.getHP() <= 0)
+						iE.remove();
+					
+					iB.remove();
+				}
 			}
-			catch(Exception e)
-			{
-				System.out.println("Curse your sudden but inevitable betrayal(Can't find ach image)");
+			
+			while(iT.hasNext()) {
+				t = iT.next();
+				
+				if(e.getRect().intersects(t.getRect())) {
+					t.setHP(t.getHP() - e.action());
+					
+					if(t.getHP() <= 0) {
+						gridPlane.setAvail(t.getX(), t.getY(), true);
+						iT.remove();
+					}
+				}
+			}
+		}
+		
+		// Checks for collision between enemyList and towerList and sets speed accordingly
+		boolean collision;
+		iE = enemyList.iterator();
+		while(iE.hasNext()){
+			collision = false;
+			e = iE.next();
+			e.resetSpeed();
+			
+			iT = towerList.iterator();
+			while(iT.hasNext() && !collision) {
+				t = iT.next();
+				
+				if(e.getRect().intersects(t.getRect())) {
+					e.setSpeed(0);
+					collision = true;
+				}
 			}
 		}
 	}
 
+	private void drawObjects(Graphics window) {
+		gridPlane.draw(window);
+		
+		for(FinalStand fS : fStand)
+			fS.draw(window);
+		
+		for(EnemyObject e : enemyList)
+			e.draw(window);
+		
+		for(TowerObject t : towerList)
+			t.draw(window);
+		
+		for(Bullet b : bulletList)
+			b.draw(window);
+	}
+	
+	private synchronized void gameOver() {
+		// Yes: 0	No: 1	Close: -1
+		if(JOptionPane.showConfirmDialog(null, "Would you like to play again?", "Game Over", JOptionPane.YES_NO_OPTION) == 0)
+			reset();
+		else {
+			JOptionPane.showMessageDialog(null, "Thanks for playing!", "Game Over", JOptionPane.PLAIN_MESSAGE);
+			System.exit(0);
+		}
+	}
+	
+	private void reset() {
+		music.close();
+		money = 500;
+		towerCost = -1;
+		moneySpawnInterval = new Random().nextInt(maxMoneySpawnInterval - minMoneySpawnInterval) + (maxMoneySpawnInterval - minMoneySpawnInterval);
+		enemySpawnInterval = new Random().nextInt(maxEnemySpawnInterval - minEnemySpawnInterval) + (maxEnemySpawnInterval - minEnemySpawnInterval);
+		moneyGen = enemyGen = System.currentTimeMillis();
+		
+		gridPlane.resetAll();
+		menu.resetMenuImages();
+		bulletList.clear();
+		towerList.clear();
+		enemyList.clear();
+		
+		for(int i = 0; i < fStand.length; ++i) {
+			fStand[i] = null;	// for garbage collection, because I don't know how Java's GC works
+			fStand[i] = new FinalStand(0, 90 + 105*i);
+		}
+		
+		System.gc();
+		music.play();
+	}
+	
+	private void readCSV() {
+		BufferedReader csvFile;
+		String line, attr[] = new String[6];
+		int len;
+		
+		try {
+			csvFile = new BufferedReader(new FileReader("media//Towers.csv"));
+			
+			try {
+				towerAttr = new TowerAttributes[Integer.parseInt(csvFile.readLine())];
+				len = 0;
+				
+				while((line = csvFile.readLine()) != null) {
+					attr = line.split(",");
+					towerAttr[len++] = new TowerAttributes(attr[0], Integer.parseInt(attr[1]), Integer.parseInt(attr[2]), Integer.parseInt(attr[3]), Integer.parseInt(attr[4]), Integer.parseInt(attr[5]));
+				}
+				
+				csvFile.close();
+				csvFile = new BufferedReader(new FileReader("media//Enemies.csv"));
+				
+				enemyAttr = new TowerAttributes[Integer.parseInt(csvFile.readLine())];
+				len = 0;
+				
+				while((line = csvFile.readLine()) != null) {
+					attr = line.split(",");
+					enemyAttr[len++] = new TowerAttributes(attr[0], Integer.parseInt(attr[1]), Integer.parseInt(attr[2]), Integer.parseInt(attr[3]), Integer.parseInt(attr[4]));
+				}
+			} catch (IOException e) {
+				System.out.printf("Read line error\n");
+			}
+		} catch (FileNotFoundException e) {
+			System.out.printf("Cannot find towers.csv\n");
+		}
+	}
+	
+	private String[] towerNames() {
+		String towerNames[] = new String[towerAttr.length];
+		int len = 0;
+		
+		for(TowerAttributes tA : towerAttr)
+			towerNames[len++] = tA.getType();
+		
+		return towerNames;
+	}
+	
+	private void clickEvent(int x, int y) {
+		
+		// Checks if the mouse click was within the tower menu
+		if(x >= 85 && x <= 85+menu.getWidth() && y <= menu.getHeight()) {
+			
+			String selImage = menu.getSelection(x, y);
+			
+			// Sets 'selIndex' to the matching index of towerAttr and 'towerCost' to the cost of the tower
+			for(int i = 0; i < towerAttr.length; ++i)
+				if(towerAttr[i].getType().equals(selImage)) {
+					towerCost = towerAttr[i].getCost();
+					selIndex = i;
+					return;
+				}
+		}
+		
+		// Checks is mouse click was in the grid area, if there is a tower selected, and if you have enough money to buy the tower
+		else if(x >= 60 && x <= Background.width && y >= 90 && y <= Background.height && money >= towerCost) {
+			// if selected tower is remove tower
+			if(selIndex == towerAttr.length-1) {
+				gridPlane.setAvail(x, y, true);
+				
+				iT = towerList.iterator();
+				TowerObject t;
+				while(iT.hasNext()) {
+					t = iT.next();
+					
+					if(x >= t.getX() && x <= t.getX() + t.getWidth() && y >= t.getY() && y <= t.getY() + t.getHeight()) {
+						iT.remove();
+						selIndex = -1;
+						menu.resetMenuImages();
+						break;
+					}
+				}
+			}
+			
+			else if(selIndex != -1) {
+				// imgPos is used to avoid redundant operations; it stores the xPos and yPos of the grid image {xPos, yPos}
+				int imgPos[] = new int[2];
+				
+				if(gridPlane.isAvailable(x, y, imgPos)) {
+					// Adds the selected tower to towerList and sets the grid location to false
+					gridPlane.setAvail(x, y, false);
+					towerList.add(new TowerObject(imgPos[0], imgPos[1], towerAttr[selIndex]));
+					money -= towerCost;
+					selIndex = -1;
+				}
+			}
+			
+			menu.resetMenuImages();
+		}
+	}
+	
 	@Override
-	//remove instances of string temp;
 	public void mouseClicked(MouseEvent e) {
-		int x = e.getX(), y = e.getY();
-		System.out.println(gridPlane.getAvail(x, y));
-		
-		/*int x = e.getX(), y = e.getY();
-		System.out.println("X: " + e.getX() + " Y: " + e.getY());
-		
-		if(e.getY() <= 84){
-			if(e.getX() > 257 && e.getX() < 352 && e.getY() > 8 && e.getY() < 71){
-				temp = "mny";
-				try {
-					menu = ImageIO.read(new File("media\\images\\menu\\menu-mny.jpg"));
-				} catch (IOException e1) {
-					System.out.println("Everything's shiny, Cap'n. Not to fret!(Can't find menu-mny image)");
-				}
-				System.out.println(temp);
-			}
-			if(e.getX() > 376 && e.getX() < 471 && e.getY() > 8 && e.getY() < 71){
-				temp = "std";
-				try {
-					menu = ImageIO.read(new File("media\\images\\menu\\menu-std.jpg"));
-				} catch (IOException e1) {
-					System.out.println("Everything's shiny, Cap'n. Not to fret!(Can't find menu-std image)");
-				}
-				System.out.println(temp);
-			}
-			if(e.getX() > 492 && e.getX() < 586 && e.getY() > 8 && e.getY() < 71){
-				temp = "pwr";
-				try {
-					menu = ImageIO.read(new File("media\\images\\menu\\menu-pwr.jpg"));
-				} catch (IOException e1) {
-					System.out.println("Everything's shiny, Cap'n. Not to fret!(Can't find menu-pwr image)");
-				}
-				System.out.println(temp);
-			}
-			if(e.getX() > 612 && e.getX() < 704 && e.getY() > 8 && e.getY() < 71){
-				temp = "hvy";
-				try {
-					menu = ImageIO.read(new File("media\\images\\menu\\menu-hvy.jpg"));
-				} catch (IOException e1) {
-					System.out.println("Everything's shiny, Cap'n. Not to fret!(Can't find menu-hvy image)");
-				}
-				System.out.println(temp);
-			}
-		}
-		
-		while(!( (e.getX() > gridList.get(x).getX() && e.getX() < gridList.get(x).getX()+80) &&
-				(e.getY() > gridList.get(x).getY() && e.getY() < gridList.get(x).getY()+80) ) && x<87){
-			//I have no idea what the fuck this does...
-			x++;
-			//System.out.println("Grid: " + x + ". X = " + gridz.get(x).getX() + ". Y = " + gridz.get(x).getY());
-		}
-		
-		if((e.getX() > gridList.get(x).getX() && e.getX() < gridList.get(x).getX()+80) && 
-			(e.getY() > gridList.get(x).getY() && e.getY() < gridList.get(x).getY()+80)){
-			
-			System.out.println("Grid: " + x + ". X = " + gridList.get(x).getX() + ". Y = " + gridList.get(x).getY());
-			
-			if(!gridList.get(x).getAvail() && !temp.equals("")){
-				System.out.println("A tower is already there!");
-				try {
-					menu = ImageIO.read(new File("media\\images\\menu\\menu.jpg"));
-				} catch (IOException e1) {
-					System.out.println("Everything's shiny, Cap'n. Not to fret!(Can't find menu image, when creating hvytwr)");
-				}
-			}
-			if(temp.equals("mny") && gridList.get(x).getAvail() && money >= 50){
-				gridList.get(x).setAvail(false);
-				munny.add(new MunnyTower(gridList.get(x).getX(), gridList.get(x).getY(), 50, 0, "std"));
-				money -= 50;
-				try {
-					menu = ImageIO.read(new File("media\\images\\menu\\menu.jpg"));
-				} catch (IOException e1) {
-					System.out.println("Everything's shiny, Cap'n. Not to fret!(Can't find menu image, when creating mnytwr)");
-				}
-				System.out.println("Munny Tower Created!");
-			}
-			if(temp.equals("std") && gridList.get(x).getAvail() && money >= 100){
-				gridList.get(x).setAvail(false);
-				standard.add(new StandardTower(gridList.get(x).getX(), gridList.get(x).getY(), 100, 10, "std"));
-				money -= 100;
-				try {
-					menu = ImageIO.read(new File("media\\images\\menu\\menu.jpg"));
-				} catch (IOException e1) {
-					System.out.println("Everything's shiny, Cap'n. Not to fret!(Can't find menu image, when creating stdtwr)");
-				}
-				System.out.println("Standard Tower Created!");
-			}
-			if(temp.equals("pwr") && gridList.get(x).getAvail() && money >= 150){
-				gridList.get(x).setAvail(false);
-				power.add(new PowerTower(gridList.get(x).getX(), gridList.get(x).getY(), 150, 18, "std"));
-				money -= 150;
-				try {
-					menu = ImageIO.read(new File("media\\images\\menu\\menu.jpg"));
-				} catch (IOException e1) {
-					System.out.println("Everything's shiny, Cap'n. Not to fret!(Can't find menu image, when creating pwrtwr)");
-				}
-				System.out.println("Power Tower Created!");
-			}
-			if(temp.equals("hvy") && gridz.get(x).getAvail() && money >= 125){
-				gridz.get(x).setAvail(false);
-				heavy.add(new HeavyTower(gridz.get(x).getX(), gridz.get(x).getY(), 200, 13, "std"));
-				money -= 125;
-				try {
-					menu = ImageIO.read(new File("media\\images\\menu\\menu.jpg"));
-				} catch (IOException e1) {
-					System.out.println("Everything's shiny, Cap'n. Not to fret!(Can't find menu image, when creating hvytwr)");
-				}
-				System.out.println("Heavy Tower Created!");
-			}
-			
-			else if(temp.equals("")){
-				System.out.println("No tower selected!");
-			}
-			temp = "";
-		}
-		else if(temp.equals("")){
-			System.out.println("Click inside the freaking grid!");
-		}*/
-		
-	}
-
-	@Override
-	public void mouseEntered(MouseEvent arg0) {
-		// TODO Auto-generated method stub
-		
-	}
-
-	@Override
-	public void mouseExited(MouseEvent arg0) {
-		// TODO Auto-generated method stub
-		
-	}
-
-	@Override
-	public void mousePressed(MouseEvent arg0) {
-		// TODO Auto-generated method stub
-		
-	}
-
-	@Override
-	public void mouseReleased(MouseEvent arg0) {
-		// TODO Auto-generated method stub
-		
+		clickEvent(e.getX(), e.getY());
 	}
 	
+	@Override
+	public void mouseReleased(MouseEvent e) {
+		clickEvent(e.getX(), e.getY());
+	}
+	
+	@Override
+	public void mousePressed(MouseEvent e) { }
+	
+	@Override
+	public void mouseEntered(MouseEvent e) { }
+
+	@Override
+	public void mouseExited(MouseEvent e) { }
 }

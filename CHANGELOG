@@ -1,3 +1,34 @@
+0.5 - It lives
+====================
++ fire method
++ random enemy generation
++ spawn money at set interval frames
++ game over - works but displays multiple dialog windows
++ collision detection
++ different bullets for towers
++ rename variables and methods so they make more sense
++ removed font
++ remove images if they are off screen
++ click and drag events	//hindsight - perhaps bad; what if clicked and don't want to place tower at all
++ if possible, consolidate TowerObject and EnemyObject; abstract class - more OOP inheritance (possibly push back to next update)
++ organize and clean up directories and images
++ better search algorithm for Grid::isAvailable
++ enemy - action() and attack() into one action() method (boolean to see what to do)
++ tower - rename fire() to action()/attack()
++ toString
++ lawn mower to kill all enemies in that row
++ 2d array for grid
++ comment code
++ Background:clickEvent() -> replace selImage with selIndex
++ merge Background::move() and Background::fire() to Background::action()
++ split FinalStand::draw() to FinalStand::draw() and FinalStand::action()
++ make a readme.txt for instructions on how to add more towers; read in attributes from text file (perhaps push to next update)
++ Default L&F for dialog windows in gameOver()
++ Shovel to remove towers. That was surprisingly simple
++ FinalStand bullet collision hits multiple rows (set min/max EnemySpawn to 100 and 150)
++ Work on readme
++ Stock images for enemies and towers and make menu template (.png, .psd and gimp) for towers images
+
 0.2 - Now with 100% less Errors
 ====================
 * A lot of stuff has been reworked, and a lot more work still has to be done. At this point it's more of a foundation then anything else.

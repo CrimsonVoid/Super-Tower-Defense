@@ -1,46 +1,42 @@
-towers fire
-
-COLLISION DETECTION!!!
-set correct speeds for enemies
-
-hp, power, speed for enemies
-
-Tower's add fire method(incorporate into TowerObject)
-
-hp, power, and price balance for towers and enemies
-
-add and play music for indiv. towers, and extra sound effects(pfft yea gl with that)
-
-collision detection hint
-if(!enemy.isEmpty()){
-			
-			//Check Standard Tower collision
-			if(!standard.isEmpty()){
-				for(int twr = 0; twr < standard.size(); twr++){
-					for(int eny = 0; eny < enemy.size(); eny++){
-						if(standard.get(twr).getRect().intersects(enemy.get(eny).getRect())){
-							enemy.get(eny).setSpeed(0);
-							standard.get(twr).setHP(standard.get(twr).getHP() - enemy.get(eny).getPow());
-							if(standard.get(twr).getHP() <= 0){
-								for(int x = 0; x < gridz.size(); x++){
-									if((standard.get(twr).getX() == gridz.get(x).getX()) &&(standard.get(twr).getY() == gridz.get(x).getY())){
-										gridz.get(x).setAvail(true);
-									}
-								}
-								standard.remove(twr);
-							}
-						}
-						else{
-							if(enemy.get(eny).getTowerType().equals(nrml)){
-								enemy.get(eny).setSpeed(3);
-							}
-							if(enemy.get(eny).getTowerType().equals(fast)){
-								enemy.get(eny).setSpeed(3);
-							}
-							if(enemy.get(eny).getTowerType().equals(strong)){
-								enemy.get(eny).setSpeed(3);
-							}
-						}
-					}
-				}
-			}
+0.5 - It lives
++ fire method
++ random enemy generation
++ spawn money at set interval frames
++ game over - works but displays multiple dialog windows
++ collision detection
++ different bullets for towers
++ rename variables and methods so they make more sense
++ removed font
++ remove images if they are off screen
++ click and drag events	//hindsight - perhaps bad; what if clicked and don't want to place tower at all
++ if possible, consolidate TowerObject and EnemyObject; abstract class - more OOP inheritance (possibly push back to next update)
++ organize and clean up directories and images
++ better search algorithm for Grid::isAvailable
++ enemy - action() and attack() into one action() method (boolean to see what to do)
++ tower - rename fire() to action()/attack()
++ toString
++ lawn mower to kill all enemies in that row
++ 2d array for grid
++ comment code
++ Background:clickEvent() -> replace selImage with selIndex
++ merge Background::move() and Background::fire() to Background::action()
++ split FinalStand::draw() to FinalStand::draw() and FinalStand::action()
++ make a readme.txt for instructions on how to add more towers; read in attributes from text file (perhaps push to next update)
++ Default L&F for dialog windows in gameOver()
++ Shovel to remove towers. That was surprisingly simple
++ FinalStand bullet collision hits multiple rows (set min/max EnemySpawn to 100 and 150)
++ Work on readme
++ Stock images for enemies and towers and make menu template (.png, .psd and gimp) for towers images
+ 
+ threaded
+ more efficient Background::collisionDetection() ?
+ should objects self draw or a thread in Background ?
+ Better sprite movement/animations
+ Draw objects relative to window size not fixed; perhaps a menu at the start prompting for resolutions
+ Grid drawing incorrectly? row/columns switched?
+ 
+ add and play music for indiv. towers, and extra sound effects
+ animations - fire, walking, movement
+ visual cues of getting hit/attacked
+ different grounds for nuke'd, etc.
+ tower disabled for T seconds before able to choose again, alpha channel for selected tower
